@@ -1,0 +1,74 @@
+datadog:
+  # The site of the Datadog intake to send Agent data to (example: `us3.datadoghq.com`)
+  # Default value is `datadoghq.com' (the US1 site)
+  site: <PLACE_DD_REGION_HERE>
+  clusterName: <YOUR_CLUSTER_NAME>
+  apiKeyExistingSecret: "datadog-secret"
+  clusterChecks:
+    enabled: true
+  orchestratorExplorer:
+    enabled: true
+  kubelet:
+    useApiServer: true
+  # tags:
+  #   - "env:dev"
+  apm: # (remove apm section if you don't want to use SSI)
+    instrumentation:
+      enabled: true
+      disabledNamespaces: # (optional) option 1 - disable SSI based on namespaces
+        - "no-ssi"
+      targets:
+        - name: "default-target" # this is just a metadata, can be any name
+          namespaceSelector:
+            matchNames:
+              - "app1-namespace" # (optional) option 2: enable SSI based on the namespace of your choice, datadog will instrument all the services in this namespace
+          ddTraceVersions:
+            python: "4"
+          ddTraceConfigs:
+            - name: "DD_PROFILING_ENABLED" ## profiling is enabled for all services in this namespace
+              value: "true"
+            - name: "DD_LOGS_INJECTION"
+              value: "true"
+        - name: "only-selected-pods" # this is just a metadata, can be any name
+          namespaceSelector:
+            matchNames:
+              - "app2-namespace" # (optional) option 2: enable SSI based on the namespace of your choice, datadog will instrument all the services in this namespace
+          podSelector: # (optional) option 3: enable SSI based on pod labels (workload selection - recommended)
+            matchLabels: # MUST match labels in the Deployment manifest at two places: metadata.labels & spec.template.metadata.labels
+              # app: "app2"
+              # datadoghq.com/apm-instrumentation: "enabled"
+          ddTraceVersions:
+            java: "1"
+            python: "4"
+            js: "5"
+            php: "1"
+            dotnet: "3"
+            ruby: "2"
+  processAgent: # live process monitoring feature
+    processCollection: true
+agents:
+  containers:
+    agent:
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "256Mi"
+    traceAgent:
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "200Mi"
+    processAgent:
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "200Mi"
+    systemProbe:
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "400Mi"
+  priorityClassCreate: true
+providers:
+  gke:
+    autopilot: true

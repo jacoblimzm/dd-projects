@@ -5,11 +5,11 @@
 - *I recommend using **Helm** instead of Operator*.
 - Official Datadog Document: https://docs.datadoghq.com/containers/kubernetes/installation/?tab=helm#installation
 
-## datadog-values.yaml
+## Configuration File
 
-- you may use the datadog-values.yaml file that is provided in the repo, but be sure to replace all relevant environment variables with your own.
+- you may use the `datadog-values.yaml` file that is provided in the repo, but be sure to replace all relevant environment variables with your own
 
-### Creating Datadog API Key as a Kubernetes Secret
+## Creating Datadog API Key as a Kubernetes Secret
 Recommendation:
 - Install the datadog agent in its own `datadog` namespace. SSI will not work on deployments in the same namespace as the agent.
 

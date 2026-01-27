@@ -26,9 +26,9 @@ helm repo update
 ```
 - deploy the agent using the provided datadog-values.yaml file
 ```bash
-helm install datadog datadog/datadog -n datadog -f datadog-values.yaml
+helm install datadog-agent datadog/datadog -n datadog -f datadog-values.yaml
 ```
 - deploying changes to the agent
 ```bash
-helm upgrade datadog datadog/datadog -n datadog -f datadog-values.yaml
+helm upgrade datadog-agent datadog/datadog -n datadog -f datadog-values.yaml
 ```

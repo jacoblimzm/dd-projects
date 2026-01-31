@@ -1,8 +1,8 @@
 datadog:
   # The site of the Datadog intake to send Agent data to (example: `us3.datadoghq.com`)
   # Default value is `datadoghq.com' (the US1 site)
-  site: <PLACE_DD_REGION_HERE>
-  clusterName: <YOUR_CLUSTER_NAME>
+  site: datadoghq.com
+  clusterName: <your-cluster-name>
   apiKeyExistingSecret: "datadog-secret"
   clusterChecks:
     enabled: true
@@ -10,9 +10,13 @@ datadog:
     enabled: true
   kubelet:
     useApiServer: true
-  # tags:
-  #   - "env:dev"
+  tags:
+    - "env:dev"
+
   apm: # (remove apm section if you don't want to use SSI)
+    portEnabled: true
+    socketEnabled: false
+    port: 8126
     instrumentation:
       enabled: true
       disabledNamespaces: # (optional) option 1 - disable SSI based on namespaces
@@ -21,22 +25,7 @@ datadog:
         - name: "default-target" # this is just a metadata, can be any name
           namespaceSelector:
             matchNames:
-              - "app1-namespace" # (optional) option 2: enable SSI based on the namespace of your choice, datadog will instrument all the services in this namespace
-          ddTraceVersions:
-            python: "4"
-          ddTraceConfigs:
-            - name: "DD_PROFILING_ENABLED" ## profiling is enabled for all services in this namespace
-              value: "true"
-            - name: "DD_LOGS_INJECTION"
-              value: "true"
-        - name: "only-selected-pods" # this is just a metadata, can be any name
-          namespaceSelector:
-            matchNames:
-              - "app2-namespace" # (optional) option 2: enable SSI based on the namespace of your choice, datadog will instrument all the services in this namespace
-          podSelector: # (optional) option 3: enable SSI based on pod labels (workload selection - recommended)
-            matchLabels: # MUST match labels in the Deployment manifest at two places: metadata.labels & spec.template.metadata.labels
-              # app: "app2"
-              # datadoghq.com/apm-instrumentation: "enabled"
+              - "all-language-ssi" # (optional) option 2: enable SSI based on the namespace of your choice, datadog will instrument all the services in this namespace
           ddTraceVersions:
             java: "1"
             python: "4"
@@ -44,9 +33,39 @@ datadog:
             php: "1"
             dotnet: "3"
             ruby: "2"
+          # ddTraceConfigs:
+          #   - name: "DD_PROFILING_ENABLED" ## profiling is enabled for all services in this namespace
+          #     value: "true"
+          #   - name: "DD_LOGS_INJECTION"
+          #     value: "true"
+        # - name: "only-selected-pods" # this is just a metadata, can be any name
+        #   namespaceSelector:
+        #     matchNames:
+        #       - "app2-namespace" # (optional) option 2: enable SSI based on the namespace of your choice, datadog will instrument all the services in this namespace
+        #   podSelector: # (optional) option 3: enable SSI based on pod labels (workload selection - recommended)
+        #     matchLabels: # MUST match labels in the Deployment manifest at two places: metadata.labels & spec.template.metadata.labels
+        #       # app: "app2"
+        #       # datadoghq.com/apm-instrumentation: "enabled"
+        #   ddTraceVersions:
+        #     java: "1"
+        #     python: "4"
+        #     js: "5"
+        #     php: "1"
+        #     dotnet: "3"
+        #     ruby: "2"
   processAgent: # live process monitoring feature
     processCollection: true
+
+clusterAgent:
+  enabled: true
+  resources:
+    requests:
+      cpu: 500m # Autopilot minimum
+      memory: 1Gi
+
 agents:
+  # image:
+  #   tag: 7.74.0 
   containers:
     agent:
       resources:

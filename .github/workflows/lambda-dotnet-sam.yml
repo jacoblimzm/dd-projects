@@ -1,0 +1,63 @@
+name: Deploy .NET Lambda (SAM)
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "agent-installation/serverless/lambda/dotnet/**"
+      - ".github/workflows/lambda-dotnet-sam.yml"
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  SAM_STACK_NAME: ${{ secrets.SAM_STACK_NAME }}
+  SAM_S3_BUCKET: ${{ secrets.SAM_S3_BUCKET }}
+  SAM_TEMPLATE: agent-installation/serverless/lambda/dotnet/template.yaml
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Setup AWS SAM
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Preflight check S3 bucket
+        run: |
+          aws s3api head-bucket --bucket "${{ env.SAM_S3_BUCKET }}"
+          bucket_region=$(aws s3api get-bucket-location --bucket "${{ env.SAM_S3_BUCKET }}" --query "LocationConstraint" --output text)
+          if [ "$bucket_region" = "None" ]; then
+            bucket_region="ap-southeast-1"
+          fi
+          if [ "$bucket_region" != "${{ env.AWS_REGION }}" ]; then
+            echo "SAM_S3_BUCKET region ($bucket_region) does not match AWS_REGION (${{ env.AWS_REGION }})." >&2
+            exit 1
+          fi
+
+      - name: SAM build
+        run: sam build --template-file "${{ env.SAM_TEMPLATE }}"
+
+      - name: SAM deploy
+        run: |
+          sam deploy \
+            --template-file "${{ env.SAM_TEMPLATE }}" \
+            --stack-name "${{ env.SAM_STACK_NAME }}" \
+            --region "${{ env.AWS_REGION }}" \
+            --capabilities CAPABILITY_IAM \
+            --s3-bucket "${{ env.SAM_S3_BUCKET }}" \
+            --no-fail-on-empty-changeset

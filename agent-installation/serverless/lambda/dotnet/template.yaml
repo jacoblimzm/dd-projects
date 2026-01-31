@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Sample .NET 8 Lambda chain (caller -> worker)
+
+Globals:
+  Function:
+    Runtime: dotnet8
+    Timeout: 10
+    MemorySize: 256
+    Tracing: Active
+    Architectures:
+      - x86_64
+
+Resources:
+  WorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: dd-prospects-worker
+      CodeUri: src/WorkerFunction/
+      Handler: WorkerFunction::WorkerFunction.Functions::Handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+    Metadata:
+      BuildMethod: dotnet8
+
+  CallerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: dd-prospects-caller
+      CodeUri: src/CallerFunction/
+      Handler: CallerFunction::CallerFunction.Functions::Handler
+      Environment:
+        Variables:
+          WORKER_FUNCTION_NAME: !Ref WorkerFunction
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - LambdaInvokePolicy:
+            FunctionName: !Ref WorkerFunction
+    Metadata:
+      BuildMethod: dotnet8
+
+Outputs:
+  CallerFunctionName:
+    Description: Lambda function name for the caller
+    Value: !Ref CallerFunction
+  WorkerFunctionName:
+    Description: Lambda function name for the worker
+    Value: !Ref WorkerFunction

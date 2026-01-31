@@ -18,4 +18,5 @@ public sealed class WorkerRequest
 {
     public string Input { get; set; } = string.Empty;
     public int Count { get; set; } = 1;
+    public Dictionary<string, string>? TraceContext { get; set; }
 }

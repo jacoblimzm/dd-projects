@@ -1,6 +1,7 @@
-using System.Text.Json;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.Serialization.SystemTextJson;
+using Datadog.Trace;
+using Datadog.Trace.Propagators;
 using Serilog;
 using Serilog.Formatting.Json;
 
@@ -20,6 +21,7 @@ public class Functions
         var input = string.IsNullOrWhiteSpace(request?.Input) ? "hello" : request!.Input;
         var count = Math.Clamp(request?.Count ?? 1, 1, 5);
 
+        using var scope = StartWorkerScope(request);
         Log.Information("Worker received input {Input} with count {Count}.", input, count);
 
         var items = Enumerable.Range(1, count)
@@ -33,5 +35,27 @@ public class Functions
         };
 
         return Task.FromResult(response);
+    }
+
+    private static Scope StartWorkerScope(WorkerRequest? request)
+    {
+        var traceContext = request?.TraceContext;
+        if (traceContext is null || traceContext.Count == 0)
+        {
+            return Tracer.Instance.StartActive("worker");
+        }
+
+        var propagationContext = Propagator.Current.Extract(
+            traceContext,
+            (carrier, key) => carrier.TryGetValue(key, out var value)
+                ? new[] { value }
+                : Array.Empty<string>());
+
+        var parentContext = propagationContext.SpanContext;
+        var traceKeys = traceContext.Count > 0 ? string.Join(",", traceContext.Keys) : "none";
+        Log.Information("Extracted trace context keys: {TraceKeys} (has parent: {HasParent})", traceKeys, parentContext is not null);
+        return parentContext is null
+            ? Tracer.Instance.StartActive("worker")
+            : Tracer.Instance.StartActive("worker", parent: parentContext);
     }
 }

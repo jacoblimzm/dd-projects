@@ -48,7 +48,8 @@ public class Functions
         if (TryParseTraceContext(traceContext, out var parentContext))
         {
             Log.Information("Extracted trace context keys: {TraceKeys} (has parent: true)", traceKeys);
-            return Tracer.Instance.StartActive("worker", parentContext);
+            var span = Tracer.Instance.StartSpan("worker", parentContext);
+            return Tracer.Instance.ScopeManager.Activate(span, finishOnClose: true);
         }
 
         Log.Information("Extracted trace context keys: {TraceKeys} (has parent: false)", traceKeys);

@@ -21,6 +21,13 @@ public class Functions
         var count = Math.Clamp(request?.Count ?? 1, 1, 5);
 
         using var scope = StartWorkerScope(request);
+        var activeSpan = Tracer.Instance.ActiveScope?.Span;
+        Log.Information(
+            "Worker active span ids trace_id {TraceId} span_id {SpanId} payload_trace_id {PayloadTraceId} payload_parent_id {PayloadParentId}",
+            activeSpan?.TraceId,
+            activeSpan?.SpanId,
+            request?.TraceContext is { } ctx && ctx.TryGetValue("trace-id", out var payloadTraceId) ? payloadTraceId : "none",
+            request?.TraceContext is { } ctx2 && ctx2.TryGetValue("parent-id", out var payloadParentId) ? payloadParentId : "none");
         Log.Information("Worker received input {Input} with count {Count}.", input, count);
 
         var items = Enumerable.Range(1, count)

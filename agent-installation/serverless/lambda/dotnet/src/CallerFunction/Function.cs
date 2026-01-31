@@ -33,7 +33,7 @@ public class Functions
 
     public async Task<CallerResponse> Handler(CallerRequest? request, ILambdaContext context)
     {
-        var workerFunctionName = Environment.GetEnvironmentVariable("WORKER_FUNCTION_NAME");
+        var workerFunctionName = System.Environment.GetEnvironmentVariable("WORKER_FUNCTION_NAME");
         if (string.IsNullOrWhiteSpace(workerFunctionName))
         {
             Log.Warning("WORKER_FUNCTION_NAME is not set.");

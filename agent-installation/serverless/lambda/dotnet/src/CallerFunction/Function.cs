@@ -1,11 +1,8 @@
-using System.IO;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using Amazon.Lambda.Core;
-using Amazon.Lambda.Model;
 using Amazon.Lambda.Serialization.SystemTextJson;
-using Amazon.Lambda;
-using Datadog.Trace;
 using Serilog;
 using Serilog.Formatting.Json;
 
@@ -20,30 +17,20 @@ public class Functions
         .MinimumLevel.Information()
         .WriteTo.Console(new JsonFormatter())
         .CreateLogger();
-    private readonly IAmazonLambda _lambdaClient;
-
-    public Functions()
-        : this(new AmazonLambdaClient())
-    {
-    }
-
-    internal Functions(IAmazonLambda lambdaClient)
-    {
-        _lambdaClient = lambdaClient;
-    }
+    private static readonly HttpClient HttpClient = new();
 
     public async Task<CallerResponse> Handler(CallerRequest? request, ILambdaContext context)
     {
         try
         {
-            var workerFunctionName = System.Environment.GetEnvironmentVariable("WORKER_FUNCTION_NAME");
-            if (string.IsNullOrWhiteSpace(workerFunctionName))
+            var workerFunctionUrl = System.Environment.GetEnvironmentVariable("WORKER_FUNCTION_URL");
+            if (string.IsNullOrWhiteSpace(workerFunctionUrl))
             {
-                Log.Warning("WORKER_FUNCTION_NAME is not set.");
+                Log.Warning("WORKER_FUNCTION_URL is not set.");
                 return new CallerResponse
                 {
                     Status = "error",
-                    Message = "WORKER_FUNCTION_NAME is not set."
+                    Message = "WORKER_FUNCTION_URL is not set."
                 };
             }
 
@@ -53,39 +40,22 @@ public class Functions
                 Count = request?.Count ?? 1
             };
 
-            var spanContext = Tracer.Instance.ActiveScope?.Span?.Context;
-            if (spanContext is not null)
-            {
-                workerRequest.TraceContext = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["trace-id"] = spanContext.TraceId.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    ["parent-id"] = spanContext.SpanId.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                };
-            }
-
-            var traceKeys = workerRequest.TraceContext is { Count: > 0 }
-                ? string.Join(",", workerRequest.TraceContext.Keys)
-                : "none";
-            Log.Information("Injected trace context keys: {TraceKeys}", traceKeys);
-
             var payload = JsonSerializer.Serialize(workerRequest, JsonOptions);
-            var invokeRequest = new InvokeRequest
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, workerFunctionUrl)
             {
-                FunctionName = workerFunctionName,
-                InvocationType = InvocationType.RequestResponse,
-                Payload = payload
+                Content = new StringContent(payload, Encoding.UTF8, "application/json")
             };
 
-            Log.Information("Invoking worker {WorkerFunctionName}.", workerFunctionName);
-            var response = await _lambdaClient.InvokeAsync(invokeRequest);
-            var responseBody = await ReadResponseAsync(response.Payload);
+            Log.Information("Invoking worker URL {WorkerFunctionUrl}.", workerFunctionUrl);
+            using var response = await HttpClient.SendAsync(httpRequest);
+            var responseBody = await response.Content.ReadAsStringAsync();
 
-            Log.Information("Worker response status {StatusCode} error {FunctionError}.", response.StatusCode, response.FunctionError ?? "none");
+            Log.Information("Worker response status {StatusCode} reason {Reason}.", (int)response.StatusCode, response.ReasonPhrase ?? "none");
             return new CallerResponse
             {
-                Status = response.FunctionError is null ? "ok" : "error",
-                Message = response.FunctionError ?? "invocation completed",
-                WorkerStatusCode = response.StatusCode,
+                Status = response.IsSuccessStatusCode ? "ok" : "error",
+                Message = response.IsSuccessStatusCode ? "invocation completed" : response.ReasonPhrase ?? "worker call failed",
+                WorkerStatusCode = (int)response.StatusCode,
                 WorkerPayload = responseBody
             };
         }
@@ -98,16 +68,5 @@ public class Functions
                 Message = ex.Message
             };
         }
-    }
-
-    private static async Task<string> ReadResponseAsync(Stream? payloadStream)
-    {
-        if (payloadStream is null)
-        {
-            return string.Empty;
-        }
-
-        using var reader = new StreamReader(payloadStream, Encoding.UTF8);
-        return await reader.ReadToEndAsync();
     }
 }

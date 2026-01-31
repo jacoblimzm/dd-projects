@@ -4,7 +4,6 @@ public sealed class WorkerRequest
 {
     public string? Input { get; set; }
     public int? Count { get; set; }
-    public Dictionary<string, string>? TraceContext { get; set; }
 }
 
 public sealed class WorkerResponse

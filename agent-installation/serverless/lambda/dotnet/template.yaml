@@ -20,6 +20,8 @@ Resources:
       Handler: WorkerFunction::WorkerFunction.Functions::Handler
       Policies:
         - AWSLambdaBasicExecutionRole
+      FunctionUrlConfig:
+        AuthType: NONE
     Metadata:
       BuildMethod: dotnet8
 
@@ -31,11 +33,11 @@ Resources:
       Handler: CallerFunction::CallerFunction.Functions::Handler
       Environment:
         Variables:
-          WORKER_FUNCTION_NAME: !Ref WorkerFunction
+          WORKER_FUNCTION_URL: !GetAtt WorkerFunction.FunctionUrl
       Policies:
         - AWSLambdaBasicExecutionRole
-        - LambdaInvokePolicy:
-            FunctionName: !Ref WorkerFunction
+      FunctionUrlConfig:
+        AuthType: NONE
     Metadata:
       BuildMethod: dotnet8
 
@@ -46,3 +48,9 @@ Outputs:
   WorkerFunctionName:
     Description: Lambda function name for the worker
     Value: !Ref WorkerFunction
+  WorkerFunctionUrl:
+    Description: Lambda function URL for the worker
+    Value: !GetAtt WorkerFunction.FunctionUrl
+  CallerFunctionUrl:
+    Description: Lambda function URL for the caller
+    Value: !GetAtt CallerFunction.FunctionUrl

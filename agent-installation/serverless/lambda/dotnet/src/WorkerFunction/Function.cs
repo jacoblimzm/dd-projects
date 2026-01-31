@@ -1,7 +1,6 @@
 using Amazon.Lambda.Core;
 using Amazon.Lambda.Serialization.SystemTextJson;
 using Datadog.Trace;
-using Datadog.Trace.Propagators;
 using Serilog;
 using Serilog.Formatting.Json;
 
@@ -37,7 +36,7 @@ public class Functions
         return Task.FromResult(response);
     }
 
-    private static Scope StartWorkerScope(WorkerRequest? request)
+    private static IDisposable StartWorkerScope(WorkerRequest? request)
     {
         var traceContext = request?.TraceContext;
         if (traceContext is null || traceContext.Count == 0)
@@ -45,17 +44,32 @@ public class Functions
             return Tracer.Instance.StartActive("worker");
         }
 
-        var propagationContext = Propagator.Current.Extract(
-            traceContext,
-            (carrier, key) => carrier.TryGetValue(key, out var value)
-                ? new[] { value }
-                : Array.Empty<string>());
-
-        var parentContext = propagationContext.SpanContext;
         var traceKeys = traceContext.Count > 0 ? string.Join(",", traceContext.Keys) : "none";
-        Log.Information("Extracted trace context keys: {TraceKeys} (has parent: {HasParent})", traceKeys, parentContext is not null);
-        return parentContext is null
-            ? Tracer.Instance.StartActive("worker")
-            : Tracer.Instance.StartActive("worker", parent: parentContext);
+        if (TryParseTraceContext(traceContext, out var parentContext))
+        {
+            Log.Information("Extracted trace context keys: {TraceKeys} (has parent: true)", traceKeys);
+            return Tracer.Instance.StartActive("worker", parent: parentContext);
+        }
+
+        Log.Information("Extracted trace context keys: {TraceKeys} (has parent: false)", traceKeys);
+        return Tracer.Instance.StartActive("worker");
+    }
+
+    private static bool TryParseTraceContext(IReadOnlyDictionary<string, string> traceContext, out SpanContext parentContext)
+    {
+        parentContext = null!;
+        if (!traceContext.TryGetValue("trace-id", out var traceIdValue)
+            || !traceContext.TryGetValue("parent-id", out var parentIdValue))
+        {
+            return false;
+        }
+
+        if (!ulong.TryParse(traceIdValue, out var traceId) || !ulong.TryParse(parentIdValue, out var parentId))
+        {
+            return false;
+        }
+
+        parentContext = new SpanContext(traceId, parentId);
+        return true;
     }
 }

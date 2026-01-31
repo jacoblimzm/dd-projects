@@ -6,7 +6,6 @@ using Amazon.Lambda.Model;
 using Amazon.Lambda.Serialization.SystemTextJson;
 using Amazon.Lambda;
 using Datadog.Trace;
-using Datadog.Trace.Propagators;
 using Serilog;
 using Serilog.Formatting.Json;
 
@@ -54,18 +53,19 @@ public class Functions
                 Count = request?.Count ?? 1
             };
 
-            var traceCarrier = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var spanContext = Tracer.Instance.ActiveScope?.Span?.Context;
             if (spanContext is not null)
             {
-                Propagator.Current.Inject(spanContext, traceCarrier, (carrier, key, value) => carrier[key] = value);
+                workerRequest.TraceContext = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["trace-id"] = spanContext.TraceId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["parent-id"] = spanContext.SpanId.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                };
             }
 
-            if (traceCarrier.Count > 0)
-            {
-                workerRequest.TraceContext = traceCarrier;
-            }
-            var traceKeys = traceCarrier.Count > 0 ? string.Join(",", traceCarrier.Keys) : "none";
+            var traceKeys = workerRequest.TraceContext is { Count: > 0 }
+                ? string.Join(",", workerRequest.TraceContext.Keys)
+                : "none";
             Log.Information("Injected trace context keys: {TraceKeys}", traceKeys);
 
             var payload = JsonSerializer.Serialize(workerRequest, JsonOptions);

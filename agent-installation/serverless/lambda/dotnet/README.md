@@ -33,6 +33,8 @@ The workflow uses these repository secrets:
 
 ```bash
 aws lambda invoke \
+  --region ap-southeast-1 \
+  --cli-binary-format raw-in-base64-out \
   --function-name dd-prospects-caller \
   --payload '{"message":"prospects","count":3}' \
   response.json

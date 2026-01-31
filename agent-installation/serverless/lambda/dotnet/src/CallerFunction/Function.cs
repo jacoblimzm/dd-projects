@@ -33,43 +33,55 @@ public class Functions
 
     public async Task<CallerResponse> Handler(CallerRequest? request, ILambdaContext context)
     {
-        var workerFunctionName = System.Environment.GetEnvironmentVariable("WORKER_FUNCTION_NAME");
-        if (string.IsNullOrWhiteSpace(workerFunctionName))
+        try
         {
-            Log.Warning("WORKER_FUNCTION_NAME is not set.");
+            var workerFunctionName = System.Environment.GetEnvironmentVariable("WORKER_FUNCTION_NAME");
+            if (string.IsNullOrWhiteSpace(workerFunctionName))
+            {
+                Log.Warning("WORKER_FUNCTION_NAME is not set.");
+                return new CallerResponse
+                {
+                    Status = "error",
+                    Message = "WORKER_FUNCTION_NAME is not set."
+                };
+            }
+
+            var workerRequest = new WorkerRequest
+            {
+                Input = string.IsNullOrWhiteSpace(request?.Message) ? "hello" : request!.Message,
+                Count = request?.Count ?? 1
+            };
+
+            var payload = JsonSerializer.Serialize(workerRequest, JsonOptions);
+            var invokeRequest = new InvokeRequest
+            {
+                FunctionName = workerFunctionName,
+                InvocationType = InvocationType.RequestResponse,
+                Payload = payload
+            };
+
+            Log.Information("Invoking worker {WorkerFunctionName}.", workerFunctionName);
+            var response = await _lambdaClient.InvokeAsync(invokeRequest);
+            var responseBody = await ReadResponseAsync(response.Payload);
+
+            Log.Information("Worker response status {StatusCode} error {FunctionError}.", response.StatusCode, response.FunctionError ?? "none");
+            return new CallerResponse
+            {
+                Status = response.FunctionError is null ? "ok" : "error",
+                Message = response.FunctionError ?? "invocation completed",
+                WorkerStatusCode = response.StatusCode,
+                WorkerPayload = responseBody
+            };
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Caller function failed.");
             return new CallerResponse
             {
                 Status = "error",
-                Message = "WORKER_FUNCTION_NAME is not set."
+                Message = ex.Message
             };
         }
-
-        var workerRequest = new WorkerRequest
-        {
-            Input = string.IsNullOrWhiteSpace(request?.Message) ? "hello" : request!.Message,
-            Count = request?.Count ?? 1
-        };
-
-        var payload = JsonSerializer.Serialize(workerRequest, JsonOptions);
-        var invokeRequest = new InvokeRequest
-        {
-            FunctionName = workerFunctionName,
-            InvocationType = InvocationType.RequestResponse,
-            Payload = payload
-        };
-
-        Log.Information("Invoking worker {WorkerFunctionName}.", workerFunctionName);
-        var response = await _lambdaClient.InvokeAsync(invokeRequest);
-        var responseBody = await ReadResponseAsync(response.Payload);
-
-        Log.Information("Worker response status {StatusCode} error {FunctionError}.", response.StatusCode, response.FunctionError ?? "none");
-        return new CallerResponse
-        {
-            Status = response.FunctionError is null ? "ok" : "error",
-            Message = response.FunctionError ?? "invocation completed",
-            WorkerStatusCode = response.StatusCode,
-            WorkerPayload = responseBody
-        };
     }
 
     private static async Task<string> ReadResponseAsync(Stream? payloadStream)

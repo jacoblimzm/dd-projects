@@ -33,7 +33,7 @@ Resources:
       Handler: CallerFunction::CallerFunction.Functions::Handler
       Environment:
         Variables:
-          WORKER_FUNCTION_URL: !GetAtt WorkerFunction.FunctionUrl
+          WORKER_FUNCTION_URL: !GetAtt WorkerFunctionUrl.FunctionUrl
       Policies:
         - AWSLambdaBasicExecutionRole
       FunctionUrlConfig:
@@ -50,7 +50,7 @@ Outputs:
     Value: !Ref WorkerFunction
   WorkerFunctionUrl:
     Description: Lambda function URL for the worker
-    Value: !GetAtt WorkerFunction.FunctionUrl
+    Value: !GetAtt WorkerFunctionUrl.FunctionUrl
   CallerFunctionUrl:
     Description: Lambda function URL for the caller
-    Value: !GetAtt CallerFunction.FunctionUrl
+    Value: !GetAtt CallerFunctionUrl.FunctionUrl

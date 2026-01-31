@@ -21,7 +21,7 @@ public class Functions
     {
         var workerRequest = ParseRequest(request);
         var input = string.IsNullOrWhiteSpace(workerRequest.Input) ? "hello" : workerRequest.Input;
-        var count = Math.Clamp(workerRequest.Count, 1, 5);
+        var count = Math.Clamp(workerRequest.Count ?? 1, 1, 5);
 
         Log.Information("Worker received input {Input} with count {Count}.", input, count);
 

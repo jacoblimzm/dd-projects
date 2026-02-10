@@ -1,13 +1,42 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Transform: AWS::Serverless-2016-10-31
+Transform:
+  - AWS::Serverless-2016-10-31
+  - Name: DatadogServerless
+    Parameters:
+      stackName: !Ref "AWS::StackName"
+      apiKeySecretArn: !Ref ApiKeySecretArn
+      dotnetLayerVersion: "23" # dotnet lambda layer version
+      extensionLayerVersion: "92" # datadog lambda layer version
+      service: !Ref ServiceName
+      env: !Ref Env
+      version: !Ref CommitHash
+      site: !Ref DDSite
+      captureLambdaPayload: true
 Description: Sample .NET 8 Lambda chain (caller -> worker)
+
+Parameters:
+  ServiceName:
+    Type: String
+    Default: CallerWorkerService
+  Env:
+    Type: String
+    Default: dev
+  CommitHash:
+    Type: String
+    Default: latest
+  DDSite:
+    Type: String
+    Default: datadoghq.com
+  ApiKeySecretArn:
+    Type: String
+    Default: ""
 
 Globals:
   Function:
     Runtime: dotnet8
     Timeout: 10
     MemorySize: 256
-    Tracing: Active
+    # Tracing: Active
     Architectures:
       - x86_64
 
@@ -20,6 +49,12 @@ Resources:
       Handler: WorkerFunction::WorkerFunction.Functions::Handler
       Policies:
         - AWSLambdaBasicExecutionRole
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref ApiKeySecretArn
       FunctionUrlConfig:
         AuthType: NONE
     Metadata:
@@ -36,6 +71,12 @@ Resources:
           WORKER_FUNCTION_URL: !GetAtt WorkerFunctionUrl.FunctionUrl
       Policies:
         - AWSLambdaBasicExecutionRole
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref ApiKeySecretArn
       FunctionUrlConfig:
         AuthType: NONE
     Metadata:

@@ -1,6 +1,10 @@
 .DS_Store
 .env
 *.log
+.aws-sam/
+**/response*.json
+**/samconfig.toml
+scripts/
 
 .idea/
 .vscode/

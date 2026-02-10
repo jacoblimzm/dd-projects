@@ -12,6 +12,7 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   SAM_STACK_NAME: ${{ secrets.SAM_STACK_NAME }}
   SAM_S3_BUCKET: ${{ secrets.SAM_S3_BUCKET }}
+  API_KEY_SECRET_ARN: ${{ secrets.API_KEY_SECRET_ARN }}
   SAM_TEMPLATE: agent-installation/serverless/lambda/dotnet/template.yaml
 
 jobs:

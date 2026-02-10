@@ -13,12 +13,12 @@ datadog:
   tags:
     - "env:dev"
 
-  apm: # (remove apm section if you don't want to use SSI)
+  apm:
     portEnabled: true
     socketEnabled: false
     port: 8126
     instrumentation:
-      enabled: true
+      enabled: true # change to false to disable SSI
       disabledNamespaces: # (optional) option 1 - disable SSI based on namespaces
         - "no-ssi"
       targets:
@@ -48,11 +48,6 @@ datadog:
         #       # datadoghq.com/apm-instrumentation: "enabled"
         #   ddTraceVersions:
         #     java: "1"
-        #     python: "4"
-        #     js: "5"
-        #     php: "1"
-        #     dotnet: "3"
-        #     ruby: "2"
   processAgent: # live process monitoring feature
     processCollection: true
 
@@ -63,9 +58,24 @@ clusterAgent:
       cpu: 500m # Autopilot minimum
       memory: 1Gi
 
+  # https://github.com/DataDog/integrations-core/blob/master/postgres/datadog_checks/postgres/data/conf.yaml.example#L691
+  confd: # example integration check for postgres
+    postgres.yaml: |-
+      cluster_check: true
+      init_config:
+      instances:
+      - dbm: true
+        host: '<your-postgres-host-ip-address>'
+        port: 5432
+        username: datadog
+        password: '<your-postgres-password>'
+        gcp:
+          project_id: '<your-gcp-project-id>'
+          instance_id: '<your-gcp-instance-id>'
+
 agents:
   # image:
-  #   tag: 7.74.0 
+  #   tag: 7.74.0
   containers:
     agent:
       resources:
@@ -88,6 +98,17 @@ agents:
           cpu: "100m"
           memory: "400Mi"
   priorityClassCreate: true
+
+clusterChecksRunner:
+  enabled: true
+  # resources:
+  #   requests:
+  #     cpu: 1
+  #     memory: 2Gi
+  #   limits:
+  #     cpu: 1
+  #     memory: 2Gi
+
 providers:
   gke:
     autopilot: true

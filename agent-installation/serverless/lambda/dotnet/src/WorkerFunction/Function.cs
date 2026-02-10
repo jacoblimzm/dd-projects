@@ -1,3 +1,4 @@
+using System.Data.SqlClient;
 using System.Text;
 using System.Text.Json;
 using Amazon.Lambda.APIGatewayEvents;
@@ -19,6 +20,25 @@ public class Functions
 
     public APIGatewayHttpApiV2ProxyResponse Handler(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
     {
+        if (string.Equals(request.RawPath, "/test/sql", StringComparison.OrdinalIgnoreCase))
+        {
+            // intentionally vulnerable example for static analysis validation.
+            var name = request.QueryStringParameters?["name"] ?? string.Empty;
+            // var sql = $"SELECT Id, Username, Email, IsAdmin FROM Users WHERE Username LIKE '%{name}%'";
+            using var connection = new SqlConnection("Server=localhost;Database=app;User Id=user;Password=pass;");
+            using var command = new SqlCommand(sql, connection);
+
+            return new APIGatewayHttpApiV2ProxyResponse
+            {
+                StatusCode = 200,
+                Headers = new Dictionary<string, string>
+                {
+                    ["Content-Type"] = "text/plain"
+                },
+                Body = "ok"
+            };
+        }
+
         var workerRequest = ParseRequest(request);
         var input = string.IsNullOrWhiteSpace(workerRequest.Input) ? "hello" : workerRequest.Input;
         var count = Math.Clamp(workerRequest.Count ?? 1, 1, 5);

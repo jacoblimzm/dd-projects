@@ -1,0 +1,38 @@
+datadog:
+  # Datadog intake site where Agent data is sent to (example: `us3.datadoghq.com`)
+  # Default value is `datadoghq.com' (US1 site)
+  site: "datadoghq.com"
+  clusterName: "your-cluster-name-here"
+  apiKeyExistingSecret: "datadog-secret"
+  clusterChecks:
+    enabled: true
+  orchestratorExplorer:
+    enabled: true
+  tags:
+    - "env:staging"
+
+  apm:
+    instrumentation:
+      enabled: true # change to false to disable SSI
+      targets:
+        - name: "default-target"
+          ddTraceVersions:
+            # java: "1"
+            # python: "4"
+            js: "5"
+            # php: "1"
+            # dotnet: "3"
+            # ruby: "2"
+
+# enable logs collection
+  logs:
+    enabled: true
+    containerCollectAll: true
+
+# enable live process monitoring
+  processAgent:
+    processCollection: true
+
+providers:
+  aks:
+    enabled: true

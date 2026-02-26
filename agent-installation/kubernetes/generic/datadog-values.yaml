@@ -1,0 +1,28 @@
+datadog:
+  site: "datadoghq.com"
+  clusterName: "your-cluster-name-here"
+  apiKeyExistingSecret: "datadog-secret"
+  clusterChecks:
+    enabled: true
+  orchestratorExplorer:
+    enabled: true
+  apm:
+    instrumentation:
+      enabled: true
+      targets:
+        - name: "default-target"
+          ddTraceVersions:
+            # java: "1"
+            # python: "3"
+            # js: "5"
+            # php: "1"
+            dotnet: "3"
+  logs:
+    enabled: true
+    containerCollectAll: true
+  processAgent:
+    enabled: true
+    processCollection: true
+
+remoteConfiguration:
+  enabled: true

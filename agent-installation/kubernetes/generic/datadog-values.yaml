@@ -24,5 +24,25 @@ datadog:
     enabled: true
     processCollection: true
 
+# Security Section (disable if not required)
+  securityAgent:
+    # Enables Workload Protection
+    runtime:
+      enabled: true
+    # Enables Misconfigurations
+    compliance:
+      enabled: true
+      host_benchmarks:
+        enabled: true
+  sbom:
+    containerImage:
+      enabled: true
+      # should be set to true when using EKS, GKE or if containerd is configured to
+      # discard uncompressed layers.
+      uncompressedLayersSupport: true
+    # Enables Host Vulnerability Management
+    host:
+      enabled: true
+
 remoteConfiguration:
   enabled: true

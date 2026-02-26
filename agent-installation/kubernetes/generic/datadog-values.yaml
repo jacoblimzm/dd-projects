@@ -37,9 +37,8 @@ datadog:
   sbom:
     containerImage:
       enabled: true
-      # should be set to true when using EKS, GKE or if containerd is configured to
-      # discard uncompressed layers.
-      uncompressedLayersSupport: true
+      # should be set to true when using EKS, GKE or if containerd is configured to discard uncompressed layers.
+      # uncompressedLayersSupport: true
     # Enables Host Vulnerability Management
     host:
       enabled: true

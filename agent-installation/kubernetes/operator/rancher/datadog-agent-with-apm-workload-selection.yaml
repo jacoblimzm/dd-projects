@@ -1,0 +1,59 @@
+kind: "DatadogAgent"
+apiVersion: "datadoghq.com/v2alpha1"
+metadata:
+  name: "datadog"
+  namespace: "datadog"
+spec:
+  global:
+    clusterName: "your-cluster-name-here"
+    site: "datadoghq.com"
+    credentials:
+      apiSecret:
+        secretName: "datadog-secret"
+        keyName: "api-key"
+    kubelet:
+      tlsVerify: false
+    tags:
+      - "env:dev" # Replace with the environment name
+  features:
+    clusterChecks:
+      enabled: true
+    orchestratorExplorer:
+      enabled: true
+    logCollection:
+      enabled: true
+      containerCollectAll: true
+    apm:
+      instrumentation:
+        enabled: true
+        targets:
+          - name: "login-service_namespace" # BLOCK 1: Target 1 specific namespace.
+            namespaceSelector:
+              matchNames:
+                - "login-service" # enable APM for 'login-service' namespace
+            ddTraceVersions:
+              java: "default" # default latest Java tracer
+            ddTraceConfigs:
+              - name: "DD_PROFILING_ENABLED"  # profiling enabled for all services in namespace
+                value: "auto"
+          - name: "billing-service_apps" # BLOCK 2: Target namespace(s) with specific labels.
+            namespaceSelector:
+              matchLabels:
+                app: "billing-service" # enables APM for services in the namespace(s) with label 'app:billing-service'
+            ddTraceVersions:
+              python: "3.1.0" # specific version of the Python tracer
+
+  override:
+    clusterAgent:
+      image:
+        name: "registry.datadoghq.com/cluster-agent:latest"
+    nodeAgent:
+      image:
+        name: "registry.datadoghq.com/agent:latest"
+      tolerations:
+        - key: "node-role.kubernetes.io/controlplane" # Verify RKE version (RKE1/RKE2) as control plane key is different. RKE2 uses "control-plane" instead of "controlplane".
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/etcd"
+          operator: "Exists"
+          effect: "NoExecute"

@@ -1,0 +1,275 @@
+# Reference demo. Replace before applying to another environment:
+# - namespace: default on every object, if the app namespace is not default
+# - IMAGE in .env (substituted into gateway, parse-api, and inventory)
+# - tags.datadoghq.com/env and DD_ENV (both are poc)
+# Do not apply this file when instrumenting an existing application.
+# See README "What to change for your environment".
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:6
+          ports:
+            - containerPort: 27017
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: default
+spec:
+  selector:
+    app: mongo
+  ports:
+    - port: 27017
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory
+  namespace: default
+  labels:
+    tags.datadoghq.com/env: poc
+    tags.datadoghq.com/service: inventory
+    tags.datadoghq.com/version: 1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory
+  template:
+    metadata:
+      annotations:
+        ad.datadoghq.com/inventory.logs: '[{"source":"nodejs","service":"inventory","auto_multi_line_detection":true}]'
+      labels:
+        app: inventory
+        agent.datadoghq.com/sidecar: fargate
+        tags.datadoghq.com/env: poc
+        tags.datadoghq.com/service: inventory
+        tags.datadoghq.com/version: 1.0.0
+    spec:
+      serviceAccountName: datadog-agent
+      containers:
+        - name: inventory
+          image: ${IMAGE}  # set IMAGE in .env; see .env.example
+          ports:
+            - containerPort: 4000
+          env:
+            - name: ROLE
+              value: inventory
+            - name: DD_ENV
+              value: poc
+            - name: DD_SERVICE
+              value: inventory
+            - name: DD_VERSION
+              value: 1.0.0
+            - name: DD_LOGS_INJECTION
+              value: "true"
+            - name: DD_TRACE_SAMPLE_RATE
+              value: "1"
+            - name: DD_TRACE_STARTUP_LOGS
+              value: "true"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory
+  namespace: default
+spec:
+  selector:
+    app: inventory
+  ports:
+    - port: 4000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: parse-api
+  namespace: default
+  labels:
+    tags.datadoghq.com/env: poc
+    tags.datadoghq.com/service: parse-api
+    tags.datadoghq.com/version: 1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: parse-api
+  template:
+    metadata:
+      annotations:
+        ad.datadoghq.com/parse-api.logs: '[{"source":"nodejs","service":"parse-api","auto_multi_line_detection":true}]'
+      labels:
+        app: parse-api
+        agent.datadoghq.com/sidecar: fargate
+        tags.datadoghq.com/env: poc
+        tags.datadoghq.com/service: parse-api
+        tags.datadoghq.com/version: 1.0.0
+    spec:
+      serviceAccountName: datadog-agent
+      containers:
+        - name: parse-api
+          image: ${IMAGE}  # set IMAGE in .env; see .env.example
+          ports:
+            - containerPort: 1337
+          env:
+            - name: ROLE
+              value: parse-api
+            - name: PARSE_DATABASE_URI
+              value: mongodb://mongo:27017/parse
+            - name: INVENTORY_URL
+              value: http://inventory:4000
+            - name: DD_ENV
+              value: poc
+            - name: DD_SERVICE
+              value: parse-api
+            - name: DD_VERSION
+              value: 1.0.0
+            - name: DD_LOGS_INJECTION
+              value: "true"
+            - name: DD_TRACE_SAMPLE_RATE
+              value: "1"
+            - name: DD_TRACE_STARTUP_LOGS
+              value: "true"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: parse-api
+  namespace: default
+spec:
+  selector:
+    app: parse-api
+  ports:
+    - port: 1337
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: default
+  labels:
+    tags.datadoghq.com/env: poc
+    tags.datadoghq.com/service: gateway
+    tags.datadoghq.com/version: 1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      annotations:
+        ad.datadoghq.com/gateway.logs: '[{"source":"nodejs","service":"gateway","auto_multi_line_detection":true}]'
+      labels:
+        app: gateway
+        agent.datadoghq.com/sidecar: fargate
+        tags.datadoghq.com/env: poc
+        tags.datadoghq.com/service: gateway
+        tags.datadoghq.com/version: 1.0.0
+    spec:
+      serviceAccountName: datadog-agent
+      containers:
+        - name: gateway
+          image: ${IMAGE}  # set IMAGE in .env; see .env.example
+          ports:
+            - containerPort: 3000
+          env:
+            - name: ROLE
+              value: gateway
+            - name: PARSE_URL
+              value: http://parse-api:1337/parse
+            - name: DD_ENV
+              value: poc
+            - name: DD_SERVICE
+              value: gateway
+            - name: DD_VERSION
+              value: 1.0.0
+            - name: DD_LOGS_INJECTION
+              value: "true"
+            - name: DD_TRACE_SAMPLE_RATE
+              value: "1"
+            - name: DD_TRACE_STARTUP_LOGS
+              value: "true"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: default
+spec:
+  selector:
+    app: gateway
+  ports:
+    - port: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgen
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loadgen
+  template:
+    metadata:
+      labels:
+        app: loadgen
+    spec:
+      containers:
+        - name: loadgen
+          image: curlimages/curl:8.10.1
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              sleep 30
+              i=0
+              while true; do
+                curl -s -o /dev/null -w "checkout %{http_code}\n" http://gateway:3000/checkout
+                i=$((i+1))
+                if [ $((i % 10)) -eq 0 ]; then
+                  curl -s -o /dev/null -w "error %{http_code}\n" http://gateway:3000/error
+                fi
+                sleep 2
+              done
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi

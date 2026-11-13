@@ -1,0 +1,15 @@
+{
+  "name": "dd-node14-poc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node 14 + Parse Server distributed tracing POC on EKS Fargate",
+  "engines": {
+    "node": "14.x"
+  },
+  "dependencies": {
+    "axios": "0.27.2",
+    "dd-trace": "3.58.0",
+    "express": "4.21.1",
+    "parse-server": "6.5.11"
+  }
+}

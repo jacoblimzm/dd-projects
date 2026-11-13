@@ -1,0 +1,55 @@
+# Git metadata: never commit a nested repository or its internals
+.git/
+.git
+**/.git/
+
+# Logs (eksctl output, app logs, npm/yarn/docker debug logs)
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archives and packaged kits
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Secrets and local config (API keys, tokens, kubeconfigs must never be committed)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+kubeconfig*
+*.kubeconfig
+datadog-secret*.yaml
+secret*.yaml
+!secret.example.yaml
+
+# Node dependencies and build output
+node_modules/
+dist/
+build/
+coverage/
+
+# Local temp files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+/tmp-*
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.code-workspace
+
+# Local gist
+gist/

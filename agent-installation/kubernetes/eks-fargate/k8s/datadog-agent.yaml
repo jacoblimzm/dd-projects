@@ -1,0 +1,36 @@
+# https://docs.datadoghq.com/integrations/eks_fargate/?tab=admissioncontrollerdatadogoperator#setup
+# kubectl apply -n datadog -f k8s/datadog-agent.yaml
+# Replace clusterName and site before applying. See README "What to change for your environment".
+apiVersion: datadoghq.com/v2alpha1
+kind: DatadogAgent
+metadata:
+  name: datadog
+spec:
+  global:
+    clusterName: dd-node14-poc  # replace with the target EKS cluster name
+    site: datadoghq.com  # replace with the customer's Datadog site; datadoghq.com is US1
+    clusterAgentTokenSecret:
+      secretName: datadog-secret
+      keyName: token
+    credentials:
+      apiSecret:
+        secretName: datadog-secret
+        keyName: api-key
+  features:
+    admissionController:
+      agentSidecarInjection:
+        enabled: true
+        provider: fargate
+        profiles:
+          - env:
+              - name: DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL
+                value: "true"
+              # Don't ship the sidecar Agent's own logs
+              - name: DD_CONTAINER_EXCLUDE_LOGS
+                value: "name:datadog-agent-injected"
+  override:
+    clusterAgent:
+      env:
+        # Native Fargate log collection through the kubelet API (Agent 7.71+)
+        - name: DD_ADMISSION_CONTROLLER_AGENT_SIDECAR_KUBELET_API_LOGGING_ENABLED
+          value: "true"
